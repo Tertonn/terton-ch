@@ -1,7 +1,12 @@
 const Discord = require('discord.js');
 const bot = new Discord.Client();
-const token = 'process.env.BOT_TOKEN';
-const prefix = 'tr!';   
+const token = process.env.BOT_TOKEN;
+const prefix = 'tr!';
+var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+require('es6-promise').polyfill();
+require('isomorphic-fetch');
+require('https').globalAgent.options.ca = require('ssl-root-cas/latest').create();
+process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = 0;
 
 
 bot.on('ready', () => {
@@ -44,6 +49,35 @@ bot.on('message', message=>{
                     message.channel.bulkDelete(args[1]);
                 } else message.channel.send("Invalid arguments!");
             } else message.channel.send("You don't have permission to do that!");
+            break;
+        case 'profile':
+            if (!args[1]) {
+                message.channel.send("Please specify the user you're searching for");
+            } else {
+                if (!args[2]) () => {return args[2]=0;}
+                if (args[2] == 0 || args[2] == 1 || args[2] == 2 || args[2] == 3) {
+                const url = 'https://osu.aestival.space/api/get_user?u=' + args[1] + '&m=' + args[2];
+                fetch(url)
+                .then(function(data) {
+                  console.log(data);
+                    return data.json();
+                })
+                .then(function(jsonResponse) {
+                const username = jsonResponse.username;
+                const pp = jsonResponse.pp_raw;
+                const acc = jsonResponse.accuracy;
+                const rank = jsonResponse.pp_rank;
+                const profEmbed = new Discord.RichEmbed()
+                .setTitle("osu!Hiragi profile")
+                .setColor(0xF97DCC)
+                .addField("Player Name", username)
+                .addField("PP", pp, true)
+                .addField("Accuracy", `${acc}%`)
+                .addField("Rank", `#${rank}`);
+                message.channel.send(profEmbed);
+                }) } else {return message.channel.send("Invalid gamemode!");}
+            }
+            break;
     }
  }
 )
