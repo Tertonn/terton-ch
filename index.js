@@ -57,16 +57,18 @@ bot.on('message', message=>{
                 if (!args[2]) () => {return args[2]=0;}
                 if (args[2] == 0 || args[2] == 1 || args[2] == 2 || args[2] == 3) {
                 const url = 'https://osu.aestival.space/api/get_user?u=' + args[1] + '&m=' + args[2];
-                fetch(url)
+                fetch(url,{method: "GET", body: JSON.stringify()})
                 .then(function(data) {
                   console.log(data);
-                    return data.json();
+                    const jsonResponse = data.json();
+                  console.log(jsonResponse);
+                    return jsonResponse;
                 })
                 .then(function(jsonResponse) {
-                const username = jsonResponse.username;
-                const pp = jsonResponse.pp_raw;
-                const acc = jsonResponse.accuracy;
-                const rank = jsonResponse.pp_rank;
+                const username = jsonResponse[0].username;
+                const pp = jsonResponse[0].pp_raw;
+                const acc = jsonResponse[0].accuracy;
+                const rank = jsonResponse[0].pp_rank;
                 const profEmbed = new Discord.RichEmbed()
                 .setTitle("osu!Hiragi profile")
                 .setColor(0xF97DCC)
