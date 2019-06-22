@@ -7,7 +7,52 @@ require('es6-promise').polyfill();
 require('isomorphic-fetch');
 require('https').globalAgent.options.ca = require('ssl-root-cas/latest').create();
 process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = 0;
-
+const mood = [{
+    word: 'Sad',
+    emoji: ':cry:'
+  },
+  {
+    word: 'Aggressive',
+    emoji: ':angry:'
+  },
+  {
+    word: 'Happy',
+    emoji: ':relieved:'
+  },
+  {
+    word: 'Silly',
+    emoji: ':stuck_out_tongue_winking_eye:'
+  },
+  {
+    word: 'Lonely',
+    emoji: ':confounded:'
+  },
+  {
+    word: 'Nervous',
+    emoji: ':persevere:'
+  },
+  {
+    word: 'Cool',
+    emoji: ':sunglasses:'
+  },
+  {
+    word: 'firedigger',
+    emoji: ':firedigger:'
+  },
+  {
+    word: 'А я тут причем?',
+    emoji: 'BOGDANGTA BOGDANGTA BOGDANGTA'
+  },
+  {
+    word: '*Honk*',
+    emoji: 'HONK'
+  },
+  {
+    word: 'Thinking',
+    emoji: ':thinking:'
+  }];
+const currmood = mood[Math.floor(Math.random() * mood.length)];
+console.log('My mood is ' + currmood.word);
 
 bot.on('ready', () => {
     console.log('The bot is online!');
@@ -36,7 +81,7 @@ bot.on('message', message=>{
     switch(args[0]) {
         case 'help':
             message.channel.send("Currently available commands:");
-            message.channel.send("info", { code: true });
+            message.channel.send("info, profile(username|id, gamemode), status, last", { code: true });
             message.channel.send("Admin commands:");
             message.channel.send("clear", { code: true });
             break;
@@ -59,19 +104,23 @@ bot.on('message', message=>{
                 const url = 'https://osu.aestival.space/api/get_user?u=' + args[1] + '&m=' + args[2];
                 fetch(url,{method: "GET", body: JSON.stringify()})
                 .then(function(data) {
-                  console.log(data);
                     const jsonResponse = data.json();
-                  console.log(jsonResponse);
                     return jsonResponse;
                 })
                 .then(function(jsonResponse) {
+                if (!jsonResponse[0]) { 
+                  message.channel.send("This user doesn't exist!");
+                  return;
+                }
                 const username = jsonResponse[0].username;
                 const pp = jsonResponse[0].pp_raw;
                 const acc = jsonResponse[0].accuracy;
                 const rank = jsonResponse[0].pp_rank;
+                const pic = 'https://a.aestival.space/' + jsonResponse[0].user_id;
                 const profEmbed = new Discord.RichEmbed()
                 .setTitle("osu!Hiragi profile")
                 .setColor(0xF97DCC)
+                .setThumbnail('https://a.aestival.space/1006')
                 .addField("Player Name", username)
                 .addField("PP", pp, true)
                 .addField("Accuracy", `${acc}%`)
@@ -80,9 +129,90 @@ bot.on('message', message=>{
                 }) } else {return message.channel.send("Invalid gamemode!");}
             }
             break;
+      case 'status':
+        const url = 'https://c.aestival.space/api/v1/onlineUsers';
+        fetch(url,{method: "GET", body: JSON.stringify()})
+        .then(function(data) {
+              const jsonResponse = data.json();
+              return jsonResponse;
+        })
+        .then(function(jsonResponse) {
+          if (!jsonResponse) {
+            return message.channel.send("Server is down!");
+          }
+          message.channel.send(`There is ${jsonResponse.result} users online now!`);
+          message.channel.send(`My current mood is ${currmood.word} ${currmood.emoji}`);
+          return;
+        })
+        break;
+      case 'last':
+        let gamemode;
+        let URL;
+        let pic;
+        if (!args[1]) {
+                message.channel.send("Please specify the user you're searching for");
+            } else {
+        if (args[1] === NaN) {
+          if (args[2] === undefined) {
+           gamemode = 0;
+          } else { gamemode = args[2]; }
+          URL = `https://osu.aestival.space/api/get_user_recent?u=${args[1]}&limit=1&type=string&m=${gamemode}`;
+        }
+        else {
+        if (args[2] === undefined) {
+          gamemode = 0;
+        } else { gamemode = args[2]; }
+        URL = `https://osu.aestival.space/api/get_user_recent?u=${args[1]}&m=${gamemode}`
+        }
+        fetch(URL,{method: "GET", body: JSON.stringify()})
+        .then(function(data) {
+          const jsonResponse = data.json();
+          return jsonResponse;
+        })
+        .then(function(jsonResponse) {
+          if (!jsonResponse[0]) {
+            message.channel.send("Invalid username/id or the server is down!")
+            return;
+          }
+          const score = jsonResponse[0].score;
+          const combo = jsonResponse[0].maxcombo;
+          const miss = jsonResponse[0].countmiss;
+          let rank = jsonResponse[0].rank;
+          if (rank === "SSHD") {rank = "XH"}
+          if (rank === "SSH") {rank = "XH"}
+          if (rank === "SS") {rank = "X"}
+          pic = `https://s.ppy.sh/images/${rank}.png`
+          const pp = jsonResponse[0].pp;
+          const username = message.member.displayName;
+          const date = jsonResponse[0].date;
+          const bURL = `https://osu.aestival.space/api/get_beatmaps?limit=1&b=${jsonResponse[0].beatmap_id}`;
+          fetch(bURL,{method: "GET", body: JSON.stringify()})
+          .then(function(data) {
+            const secondResponse = data.json();
+            return secondResponse;
+          })
+          .then(function(secondResponse) {
+          const artist = secondResponse[0].artist;
+          const title = secondResponse[0].title;
+          const diff = secondResponse[0].version;
+          const maxcombo = secondResponse[0].max_combo;
+          const lastEmbed = new Discord.RichEmbed()
+              .setTitle(`${args[1]}'s Last Score`)
+              .setColor(0xF97DCC)
+              .setThumbnail(pic)
+              .addField(`${artist} - ${title}[${diff}]`, "\u200B")
+              .addField(`${pp}pp`, "\u200B")
+              .addField("Total Score", score)
+              .addField("Combo", `${combo}/${maxcombo}`)
+              .addField("Miss", miss)
+              .addField("Date", date);
+          message.channel.send(lastEmbed);
+          })
+          
+        })   
+        }
     }
  }
 )
-
 
 bot.login(token);
